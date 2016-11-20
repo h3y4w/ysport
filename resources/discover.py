@@ -2,12 +2,6 @@ from flask_restful import Resource, request
 from flask_sqlalchemy import SQLAlchemy
 import DB
 
-db = SQLAlchemy()
-def discover_setup(db_):
-    global db
-    db=db_
-
-
 
 class Discover (Resource):
     def get(self):
