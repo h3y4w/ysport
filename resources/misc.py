@@ -1,10 +1,13 @@
 from flask_restful import Resource, request
 import DB
 from response import ResponseAPI
+import traceback
+
 class Vote (Resource):
     def post(self, obj_id, way):
+        data = {}
         error = False
-        message = None
+        message = "" 
 
         print 'USER ID IS DEFINED IN POST METHOD FOR TESTING!!!'
         user_id = 1
@@ -15,10 +18,10 @@ class Vote (Resource):
             vote = None
 
             if parent_type == 'video':
-                vote = DB.Vote.find_by_video_id(obj_id, user_id=user_id)
+                vote = DB.Vote.find_model_by_video_and_user_id(obj_id, user_id)
 
             elif parent_type == 'comment': 
-                vote = DB.vote.find_by_comment_id(obj_id, user_id=user_id)
+                vote = DB.vote.find_by_comment_and_user_id(obj_id, user_id)
 
             vote = vote or DB.Vote.create({'parent_type': parent_type, parent_type+'_id':obj_id, 'user_id': user_id}) 
             if way == "up":
@@ -30,9 +33,13 @@ class Vote (Resource):
             elif way == "remove":
                 vote.set_way(-1)
 
+            data = vote.json()
+
         except Exception as e:
+            traceback.print_exc()
             message = str(e)
             error = True
 
-        return ResponseAPI('post', 'Videos.Vote', message=message, error=error).json()
+        finally:
+            return ResponseAPI('post', 'Vote', data=data, message=message, error=error).json()
 

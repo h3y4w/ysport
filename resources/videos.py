@@ -4,21 +4,22 @@ from response import ResponseAPI
   
 class Videos (Resource):
     def get(self, id):
-        data = None
+        data = {} 
         error = False 
-        message = None
-    
+        message = "" 
+
         try:
-            data = DB.Video.find_model_by_id(id)
-            if data is not None:
-                data=data.json()
-            else:
-                data = {}
-        
+            video = DB.Video.find_model_by_id(id)
+            if video is not None:
+                data = video.json() 
+                data['views'] = video.get_views(only_count=True)
+                print data
+
         except Exception as e:
-          error = True
-          message = str(e)
-          
+            error = True
+            message = str(e)
+            DB.session.rollback()
+
         finally:
             return ResponseAPI('get', 'Videos', data=data, error=error, message=message).json()
   
@@ -27,18 +28,20 @@ class Videos (Resource):
         error = False
         message = None
     
+    
         try:
-          video = DB.Video.find_model_by_id(id)
-          video.title = request.args.get('title') or video.title
-          video.text = request.args.get('text') or video.text
-          DB.save()
+            video = DB.Video.find_model_by_id(id)
+            video.title = request.args.get('title') or video.title
+            video.text = request.args.get('text') or video.text
+            DB.save()
           
         except Exception as e:
-          error = True
-          message = str(e)
+            DB.session.rollback()
+            error = True
+            message = str(e)
           
         finally:
-          return ResponseAPI('put', 'Videos', message=message, error=error).json()
+            return ResponseAPI('put', 'Videos', message=message, error=error).json()
 
 
 
@@ -57,6 +60,7 @@ class Video (Resource):
             data = DB.Video.create(params).json()
     
         except Exception as e:
+            DB.session.rollback()
             error = True
             message = str(e)
         

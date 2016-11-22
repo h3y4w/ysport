@@ -5,16 +5,17 @@ from response import ResponseAPI
 class User (Resource):
     def post(self):
         error = False 
-        message = None
-        data = None
-        
+        message = "" 
+        data = {}
+         
         try:
             params = request.get_json(force=True)
-            data = DB.User.create(params, json=True)
-
+            user = DB.User.create(params)
+            if user is not None:
+                data = {'id': user.id}
         except Exception as e:
             error = True
             message = str(e)
-           
+
         finally:
             return ResponseAPI('User', 'post', error=error, message=message, data=data).json()
