@@ -15,7 +15,10 @@ db = SQLAlchemy(app)
 from resources.discover import Discover
 from resources.videos import Video, Videos
 from resources.users import User
+from resources.tags import Tag, Tags, TagAttribute, TagAttributes
+from resources.views import View, Views
 from resources.misc import Vote
+
 #from resources.comments import Comments
 
 
@@ -26,7 +29,16 @@ if __name__ == "__main__":
 
     api.add_resource(Video, '/video')
     api.add_resource(Videos, '/video/<int:id>')
-    api.add_resource(Vote, '/vote/<int:obj_id>/<string:way>')
 
+    api.add_resource(View, '/view')
+    api.add_resource(Views, '/view/<int:id>')
+
+    api.add_resource(Tag, '/tag')
+    api.add_resource(Tags, '/tag/<int:id>')
+    api.add_resource(TagAttribute, '/taga')
+    api.add_resource(TagAttributes, '/taga/<int:id>')
+
+    api.add_resource(Vote, '/vote/<int:obj_id>/<string:way>')
     app.run()
+
 

@@ -14,16 +14,15 @@ class Discover (Resource):
         section = request.args.get('section') or 'All'
         
         votes = DB.Vote.find_models_by_time(0, minutes=1)
-        data
-            if vote.parent_type == "video":
-                print vote.video_id
+        if vote.parent_type == "video":
+            print vote.video_id
 
 
 
 
 
-            elif vote.parent_type == "comment":
-                print vote.comment_id
+        elif vote.parent_type == "comment":
+            print vote.comment_id
 
         
 class HotSection (Resource):
