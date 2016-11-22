@@ -9,7 +9,7 @@ class Videos (Resource):
         message = None
     
         try:
-            data = DB.Video.find_by_id(id)
+            data = DB.Video.find_model_by_id(id)
             if data is not None:
                 data['vote'] = DB.Video.get_accumulative_vote(id)
                 data=data.json()
@@ -29,7 +29,7 @@ class Videos (Resource):
         message = None
     
         try:
-          video = DB.Video.find_by_id(id)
+          video = DB.Video.find_model_by_id(id)
           video.title = request.args.get('title') or video.title
           video.text = request.args.get('text') or video.text
           DB.save()

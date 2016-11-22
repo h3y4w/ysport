@@ -5,14 +5,16 @@ import DB
 
 class Discover (Resource):
     def get(self):
+        data = None
+        error = False
+        message = None
+        
         sid = request.args.get('sid') or 0
         page = request.args.get('page') or 0
         section = request.args.get('section') or 'All'
-        parent_types = request.args.get('parent_type') or ['video', 'comment']
-
-        votes = DB.Vote.find_by_time(0, minutes=1, parent_types=parent_types)
-        for vote in votes:
-            
+        
+        votes = DB.Vote.find_models_by_time(0, minutes=1)
+        data
             if vote.parent_type == "video":
                 print vote.video_id
 

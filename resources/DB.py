@@ -27,6 +27,9 @@ def add_to_db(obj):
     db.session.commit()
     return obj
 
+def convert_model_list(model_list):
+    return j.dumps([model.id:model.json() for model in model_list])
+
 def save():
   db.session.commit()
   
@@ -68,8 +71,8 @@ class User(db.Model):
         user = db.sssion.query(User).filter_by(nick=nick).first()
         return user.password == password
 
-    def change_nick(self, new_nick):
-        self.nick = new_nick
+    def set_nick(self, nick):
+        self.nick = nick
         save()
 
 
@@ -82,10 +85,10 @@ class Video(db.Model):
     text = db.Column(db.String(250))
     views = db.Column(db.Integer, default=0)
 
-    #--- REMOVE THIS----#
+    #----REMOVE THIS----#
     upvotes = db.Column(db.Integer, default=0)
     downvotes = db.Column(db.Integer, default=0)
-    #-------------------#
+    #-On Next db create-#
 
     upload_date = db.Column(db.DateTime)
     
@@ -101,7 +104,7 @@ class Video(db.Model):
         return j.dumps(data)
     
     @staticmethod
-    def find_by_id(id):
+    def find_model_by_id(id):
       return db.session.query(Video).filter_by(id=id).first()
     
     @staticmethod
@@ -119,10 +122,10 @@ class Video(db.Model):
         #db.session.query(Vote).filter(
         #return db.session.query(Video).order_by(Video.upvotes)#.paginate(page=page, per_page=per)
 
-    def set_view(self, view_count):
-        self.views += view_count
-        save()
-
+    def get_views(self):
+        views = db.session.query(View).filter(id=self.id).all()
+        return views, len(views)
+        
     @staticmethod
     def get_featured(id, page, per=10):
         return db.session.query(Video).order_by(Video.views).paginate(page=page, per_page=per)
@@ -132,7 +135,43 @@ class Video(db.Model):
       return db.session.query(Video).order_by(Video.upload_date).paginate(page=page, per_page=per)
 
 
-
+class View(db.Model):
+    __tablename__ = "view"
+    id = db.Column(db.Integer, primay_key=True)
+    video_id = db.Column(db.Integer, nullable=False)
+    parent_type = db.Column(db.String(20), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    count = db.Column(db.Integer, default=0)
+    last_date_viewed = db.Column(db.DateTime)
+    
+    def __init__(self, params):
+        self.video_id = params['video_id']
+        self.parent_type = parmas['parent_type']
+        self.user_id = params['user_id']
+        self.count = params['count']
+   
+    def set_count(self, count):
+        self.count += count
+        self.last_date_viewed = datetime.datetime.utcnow()
+        save()
+        
+    @staticmethod
+    def create(self, params):
+        return add_to_db(View(params))
+    
+    @staticmethod
+    def find_model_by_id(id):
+        return db.session.query(View).filter(id=id).first()
+   
+    @staticmethod
+    def find_models_by_video_id(video_id):
+        return db.session.query(View).filter(video_id=video_id).all()
+    
+    @staticmethod
+    def find_models_by_user_id(user_id):
+        return db.session.query(View).filter(user_id=user_id).all()
+    
+    
 class Vote(db.Model):
     __tablename__ = "vote"
     id = db.Column(db.Integer, primary_key=True)
@@ -175,38 +214,39 @@ class Vote(db.Model):
 
 
     @staticmethod
-    def find_by_video_id(video_id, user_id=None):
+    def find_model_by_video_id(video_id, user_id=None):
         if user_id is None:
-            return db.session.query(Vote).filter_by(video_id=video_id).all()
-        return db.session.query(Vote).filter_by(video_id=video_id, user_id=user_id).all()
+            return db.session.query(Vote).filter(video_id=video_id).first()
+        return db.session.query(Vote).filter(video_id=video_id, user_id=user_id).first()
 
     @staticmethod
-    def find_by_time(hours, minutes=0, parent_types=['video', 'comment']):
+    def find_models_by_time(hours, minutes=0):
         print 'INCLUDING MINUTE IN SEARCH FOR DEV'
-        return db.session.query(Vote).filter(Vote.parent_type.in_(
-            parent_types), Vote.date < datetime.datetime.utcnow()
-            +datetime.timedelta(hours=hours, minutes=minutes)).all()
+        votes = db.session.query(Vote).filter(Vote.date < datetime.datetime.utcnow()+datetime.timedelta(hours=hours, minutes=minutes)).all()
+        return votes, len(votes)
 
 
 
 class Thread(db.Model):
-  __tablename__ = "thread"
-  id = db.Column(db.Integer, primary_key=True)
-  video_id = db.Column(db.Integer, db.ForeignKey('video.id'))
+    __tablename__ = "thread"
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey('video.id'))
+    
+    def __init__(self, params):
+        self.video_id = params['video_id'] or None
+  
+    def get_comments(self):
+        comments = db.session.query(Comment).filter(thread_id=self.id).all()
+        return comments, len(comments)
+   
+    @staticmethod
+    def create(params):
+        return add_to_db(Thread(params))
   
 
-  def __init__(self, params):
-    self.video_id = params['video_id'] or None
-  
-
-  @staticmethod
-  def create(params):
-    return add_to_db(Thread(params))
-  
-
-  @staticmethod
-  def find_by_video_id(video_id):
-    return db.session.query(Thread).filter_by(video_id=video_id)
+    @staticmethod
+    def find_model_by_video_id(video_id):
+        return db.session.query(Thread).filter(video_id=video_id).first()
 
 
 
@@ -214,13 +254,14 @@ class Comment(db.Model):
   __tablename__ = "comment"
   id = db.Column(db.Integer, primary_key=True)
   user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-  thead_id = db.Column(db.Integer, db.ForeignKey('thread.id'))
+  thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'))
   text = db.Column(db.String(250),nullable =False)
   time = db.Column(db.DateTime)
   
   @staticmethod
-  def find_by_thread_id(thread_id):
-    return db.session.query(Comment).filter_by(thread_id=thread_id)
+  def find_models_by_thread_id(thread_id):
+    return db.session.query(Comment).filter(thread_id=thread_id).all()
+
 
 
 class Mention(db.Model):
@@ -229,18 +270,68 @@ class Mention(db.Model):
   user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
   mentioned_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
   comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'))
-  
-  @staticmethod
-  def find_by_comment_id(comment_id):
-    return db.session.query(Mention).filter_by(comment_id=comment_id)
 
-   
+  @staticmethod
+    def find_models_by_comment_id(comment_id):
+        return db.session.query(Mention).filter(comment_id=comment_id).all()
+    
+class TagAttribute(db.Model):
+    __tablename__ = "tag_attribute"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(30), nullable=False)
+    desc = db.Column(db.String(200))
   
+    def __init__(self, params):
+        self.name = params['name']
+        self.desc = params['desc']
+    
+    def set_name(self, name):
+        self.name = name
+        save()
+        
+    def set_desc(self, desc):
+        self.desc = desc
+        save()
+        
+    @staticmethod
+    def create(params):
+        return add_to_db(TagAttribute(params))
+    
+    @staticmethod
+    def find_model_by_id(id):
+        return db.session.query(TagAttribute).filter(id=id).first()
+    
 class Tag(db.Model):
     __tablename__ = "tag"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     video_id = db.Column(db.Integer, db.ForeignKey('video.id'))
+    value = db.Column(db.String(100), nullable=False)
+    tag_attribute_id = db.Column(db.Integer, db.ForeigKey('tag_attribute.id'))
+    
+    
+    def __init__(self, params):
+        self.user_id = params['user_id']
+        self.video_id = params['video_id']
+        self.value = params['value']
+        self.tag_attribute_id = params['tag_attribute_id']
+        
+    def set_value(self, value):
+        self.value = value
+        save()
+    
+    @staticmethod
+    def create(params):
+        return add_to_db(Tag(params))
+    
+    @staticmethod
+    def find_model_by_id(id):
+        return db.session.query(Tag).filter(id=id).first()
+    
+    @staticmethod
+    def find_models_by_video_id(video_id):
+        return db.session.query(Tag).filter(vide_id=video_id).all()
+                                               
 if __name__ == "__main__":
     db.create_all()
     db.session.commit()
