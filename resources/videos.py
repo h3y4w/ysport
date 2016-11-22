@@ -11,6 +11,7 @@ class Videos (Resource):
         try:
             data = DB.Video.find_by_id(id)
             if data is not None:
+                data['vote'] = DB.Video.get_accumulative_vote(id)
                 data=data.json()
             else:
                 data = {}

@@ -37,6 +37,8 @@ def remove_from_db(obj):
 
 
 class User(db.Model):
+    """ Table to hold User information """
+
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(50), unique=True)
@@ -106,6 +108,11 @@ class Video(db.Model):
     def create(params):
         return add_to_db(Video(params))
 
+
+    @staticmethod
+    def get_accumulative_vote(id):
+        return db.session.query(Vote).filter(id=id).count()
+
     @staticmethod
     def get_hot(id, page, per=10):
         pass
@@ -138,7 +145,7 @@ class Vote(db.Model):
     def __init__(self, params):
         self.user_id = params['user_id']
         self.date = datetime.datetime.utcnow()
-        self.parent_id = params['parent_id']
+        self.parent_type = params['parent_type']
 
         if params['parent_type'] == 'video':
             self.video_id = params['video_id']
@@ -170,14 +177,15 @@ class Vote(db.Model):
     @staticmethod
     def find_by_video_id(video_id, user_id=None):
         if user_id is None:
-            return db.session.query(Vote).filter_by(video_id=video_id).first()
-        return db.session.query(Vote).filter_by(video_id=video_id, user_id=user_id).first()
+            return db.session.query(Vote).filter_by(video_id=video_id).all()
+        return db.session.query(Vote).filter_by(video_id=video_id, user_id=user_id).all()
 
     @staticmethod
-    def find_by_time(hours, minutes=0):
+    def find_by_time(hours, minutes=0, parent_types=['video', 'comment']):
         print 'INCLUDING MINUTE IN SEARCH FOR DEV'
-        return db.session.query(Vote).filter(Vote.date < datetime.datetime.utcnow()+datetime.timedelta(hours=hours, minutes=minutes)).all()
-
+        return db.session.query(Vote).filter(Vote.parent_type.in_(
+            parent_types), Vote.date < datetime.datetime.utcnow()
+            +datetime.timedelta(hours=hours, minutes=minutes)).all()
 
 
 

@@ -8,12 +8,17 @@ class Discover (Resource):
         sid = request.args.get('sid') or 0
         page = request.args.get('page') or 0
         section = request.args.get('section') or 'All'
-        
-        votes = DB.Vote.find_by_time(0, minutes=1)
+        parent_types = request.args.get('parent_type') or ['video', 'comment']
+
+        votes = DB.Vote.find_by_time(0, minutes=1, parent_types=parent_types)
         for vote in votes:
             
             if vote.parent_type == "video":
                 print vote.video_id
+
+
+
+
 
             elif vote.parent_type == "comment":
                 print vote.comment_id
