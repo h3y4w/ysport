@@ -8,7 +8,7 @@ class ResponseAPI (object):
     self.error = error
     self.message = message
     self.data = data
-    if error == True:
+    if error == True and method in ['put', 'post', 'delete']:
         db.session.rollback()
 
   def json(self):
